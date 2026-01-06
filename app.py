@@ -28,6 +28,8 @@ def init_db():
       password_hash TEXT NOT NULL,
       level TEXT NOT NULL DEFAULT 'normal',
       auth_token TEXT,
+      edu TEXT,
+      city TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     """
