@@ -310,6 +310,7 @@ def admin_city():
         conn.close()
 
 
+# for barfoods
 @app.route("/api/barfoods/list", methods=["GET"])
 def barfoods_list():
     # 確認有沒有登入(token is ok?)
@@ -317,21 +318,99 @@ def barfoods_list():
 
     if not current_user:
         return jsonify({"error": "未登入或token not ok"}), 401
-    # 確認是否為admin
-    # if current_user["level"] != "admin":
-    #     return jsonify({"error": "沒有權限!"}), 403
-    # 列出所有會員資料
     conn = get_connection()
     try:
         with conn:
             with conn.cursor(cursor_factory=RealDictCursor) as curor:
-                curor.execute(
-                    "SELECT id, name, price, qty, downtime FROM barfood"
-                )
+                curor.execute("SELECT id, name, price, qty, downtime FROM barfoods ")
                 rows = curor.fetchall()
 
-                # 回傳所有會員等級統計資料
-                return jsonify({"message": "會員居住地資料", "data": rows})
+                # 回傳所有食物資料
+                return jsonify({"message": "接收資料成功!", "data": rows})
+    finally:
+        conn.close()
+
+
+@app.route("/api/barfoods/add", methods=["POST"])
+def barfoods_add():
+    # 確認有沒有登入(token is ok?)
+    current_user = get_current_user_from_request()
+
+    if not current_user:
+        return jsonify({"error": "未登入或token not ok"}), 401
+
+    data = request.get_json(silent=True) or {}
+
+    name = (data.get("name") or "").strip()
+    price = (data.get("price") or "").strip()
+    qty = (data.get("qty") or "").strip()
+    downtime = (data.get("downtime") or "").strip()
+
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                # 新增上架物品
+                cursor.execute(
+                    "INSERT INTO barfoods(name, price, qty, downtime) VALUES(%s, %s, %s, %s)",
+                    (name, price, qty, downtime),
+                )
+        return jsonify({"message": "add ok!"})
+    finally:
+        conn.close()
+
+
+@app.route("/api/barfoods/update", methods=["POST"])
+def barfoods_update():
+    # 確認有沒有登入(token is ok?)
+    current_user = get_current_user_from_request()
+
+    if not current_user:
+        return jsonify({"error": "未登入或token not ok"}), 401
+
+    data = request.get_json(silent=True) or {}
+
+    id = (data.get("id") or "").strip()
+    name = (data.get("name") or "").strip()
+    price = (data.get("price") or "").strip()
+    qty = (data.get("qty") or "").strip()
+    downtime = (data.get("downtime") or "").strip()
+
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                # 新增上架物品
+                cursor.execute(
+                    f"UPDATE barfoods SET name='{name}', price={price}, qty={qty}, downtime='{downtime}' WHERE id = {id};",
+                )
+        return jsonify({"message": "update ok!"})
+    finally:
+        conn.close()
+
+
+@app.route("/api/barfoods/delete", methods=["POST"])
+def barfoods_delete():
+    # 確認有沒有登入(token is ok?)
+    current_user = get_current_user_from_request()
+
+    if not current_user:
+        return jsonify({"error": "未登入或token not ok"}), 401
+
+    data = request.get_json(silent=True) or {}
+
+    id = (data.get("id") or "").strip()
+
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                # 新增上架物品
+                cursor.execute(
+                    "DELETE FROM barfoods WHERE id = %s;",
+                    (id),
+                )
+        return jsonify({"message": "delete ok!"})
     finally:
         conn.close()
 
