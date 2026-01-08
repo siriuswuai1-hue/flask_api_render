@@ -226,7 +226,7 @@ def admin_get_all_users():
         with conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(
-                    "SELECT id, username, level, created_at FROM member ORDER BY id DESC"
+                    "SELECT id, username, level, created_at FROM member ORDER BY id"
                 )
                 users = cursor.fetchall()
                 return jsonify({"message": "資料讀取成功", "users": users})
@@ -301,6 +301,32 @@ def admin_city():
             with conn.cursor(cursor_factory=RealDictCursor) as curor:
                 curor.execute(
                     "SELECT city, COUNT(*) as count FROM member GROUP BY city"
+                )
+                rows = curor.fetchall()
+
+                # 回傳所有會員等級統計資料
+                return jsonify({"message": "會員居住地資料", "data": rows})
+    finally:
+        conn.close()
+
+
+@app.route("/api/barfoods/list", methods=["GET"])
+def barfood_list():
+    # 確認有沒有登入(token is ok?)
+    current_user = get_current_user_from_request()
+
+    if not current_user:
+        return jsonify({"error": "未登入或token not ok"}), 401
+    # 確認是否為admin
+    # if current_user["level"] != "admin":
+    #     return jsonify({"error": "沒有權限!"}), 403
+    # 列出所有會員資料
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as curor:
+                curor.execute(
+                    "SELECT id, name, price, qty, downtime FROM barfood"
                 )
                 rows = curor.fetchall()
 
