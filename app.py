@@ -311,7 +311,7 @@ def admin_city():
 
 
 @app.route("/api/barfoods/list", methods=["GET"])
-def barfood_list():
+def barfoods_list():
     # 確認有沒有登入(token is ok?)
     current_user = get_current_user_from_request()
 
