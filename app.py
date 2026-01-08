@@ -415,6 +415,30 @@ def barfoods_delete():
         conn.close()
 
 
+# 修復id
+@app.route("/api/fix-barfoods-seq", methods=["POST"])
+def fix_barfoods_sequence():
+    current_user = get_current_user_from_request()
+    if not current_user:
+        return jsonify({"error": "未登入"}), 401
+
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                # 重置序列到當前最大 id
+                cursor.execute(
+                    """
+                    SELECT setval('barfoods_id_seq', 
+                                   GREATEST(1, COALESCE((SELECT MAX(id) FROM barfoods), 0))
+                                  );
+                """
+                )
+        return jsonify({"message": "序列已修復！"})
+    finally:
+        conn.close()
+
+
 @app.route("/api/ping")
 def ping():
     return jsonify({"message": "ping"})
