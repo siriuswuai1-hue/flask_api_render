@@ -360,7 +360,7 @@ def barfoods_add():
         conn.close()
 
 
-@app.route("/api/barfoods/update", methods=["POST"])
+@app.route("/api/barfoods/update", methods=["PUT"])
 def barfoods_update():
     # 確認有沒有登入(token is ok?)
     current_user = get_current_user_from_request()
@@ -389,7 +389,7 @@ def barfoods_update():
         conn.close()
 
 
-@app.route("/api/barfoods/delete", methods=["POST"])
+@app.route("/api/barfoods/delete", methods=["DELETE"])
 def barfoods_delete():
     # 確認有沒有登入(token is ok?)
     current_user = get_current_user_from_request()
