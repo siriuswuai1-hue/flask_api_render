@@ -311,106 +311,149 @@ def admin_city():
 
 
 # for barfoods
+# list
 @app.route("/api/barfoods/list", methods=["GET"])
 def barfoods_list():
-    # 確認有沒有登入(token is ok?)
     current_user = get_current_user_from_request()
-
     if not current_user:
-        return jsonify({"error": "未登入或token not ok"}), 401
+        return jsonify({"error": "未登入或 token 無效"}), 401
+
     conn = get_connection()
     try:
         with conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as curor:
-                curor.execute("SELECT id, name, price, qty, downtime FROM barfoods ")
-                rows = curor.fetchall()
-
-                # 回傳所有食物資料
-                return jsonify({"message": "接收資料成功!", "data": rows})
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, name, price, qty, downtime 
+                    FROM barfoods 
+                    ORDER BY id ASC
+                """
+                )
+                rows = cursor.fetchall()
+                return jsonify({"message": "接收資料成功!", "data": rows}), 200
     finally:
         conn.close()
 
 
+# add
 @app.route("/api/barfoods/add", methods=["POST"])
 def barfoods_add():
-    # 確認有沒有登入(token is ok?)
     current_user = get_current_user_from_request()
-
     if not current_user:
-        return jsonify({"error": "未登入或token not ok"}), 401
+        return jsonify({"error": "未登入或 token 無效"}), 401
 
     data = request.get_json(silent=True) or {}
-
     name = (data.get("name") or "").strip()
     price = (data.get("price") or "").strip()
     qty = (data.get("qty") or "").strip()
     downtime = (data.get("downtime") or "").strip()
 
+    # 基本驗證
+    if not name or not price or not qty:
+        return jsonify({"error": "缺少必要欄位：name, price, qty"}), 400
+
     conn = get_connection()
     try:
         with conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                # 新增上架物品
                 cursor.execute(
-                    "INSERT INTO barfoods(name, price, qty, downtime) VALUES(%s, %s, %s, %s)",
+                    """
+                    INSERT INTO barfoods (name, price, qty, downtime)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id;
+                """,
                     (name, price, qty, downtime),
                 )
-        return jsonify({"message": "add ok!"})
+                new_id = cursor.fetchone()["id"]
+
+        return jsonify({"message": "新增成功！", "id": new_id}), 201  # Created
+
+    except Exception as e:
+        print(f"新增失敗: {e}")
+        return jsonify({"error": "伺服器內部錯誤"}), 500
+
     finally:
         conn.close()
 
 
-@app.route("/api/barfoods/update", methods=["PUT"])
-def barfoods_update():
-    # 確認有沒有登入(token is ok?)
+# update
+@app.route("/api/barfoods/<int:id>", methods=["PUT"])
+def barfoods_update(id):
+    # 1. 驗證登入
     current_user = get_current_user_from_request()
-
     if not current_user:
-        return jsonify({"error": "未登入或token not ok"}), 401
+        return jsonify({"error": "未登入或 token 無效"}), 401
 
+    # 2. 取得 JSON 資料
     data = request.get_json(silent=True) or {}
 
-    id = (data.get("id") or "").strip()
     name = (data.get("name") or "").strip()
     price = (data.get("price") or "").strip()
     qty = (data.get("qty") or "").strip()
     downtime = (data.get("downtime") or "").strip()
 
+    # 3. 基本驗證
+    if not name or not price or not qty:
+        return jsonify({"error": "缺少必要欄位：name, price, qty"}), 400
+
+    # 4. 安全更新（使用參數化查詢，防止 SQL injection）
     conn = get_connection()
     try:
         with conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                # 新增上架物品
                 cursor.execute(
-                    f"UPDATE barfoods SET name='{name}', price={price}, qty={qty}, downtime='{downtime}' WHERE id = {id};",
+                    """
+                    UPDATE barfoods 
+                    SET name = %s, price = %s, qty = %s, downtime = %s 
+                    WHERE id = %s
+                    RETURNING id;
+                    """,
+                    (name, price, qty, downtime, id),
                 )
-        return jsonify({"message": "update ok!"})
+                result = cursor.fetchone()
+
+                if not result:
+                    return jsonify({"error": "找不到指定的食品 ID"}), 404
+
+        return jsonify({"message": "更新成功！", "id": id}), 200
+
+    except Exception as e:
+        # 可選：記錄錯誤日誌
+        print(f"更新失敗: {e}")
+        return jsonify({"error": "伺服器內部錯誤"}), 500
+
     finally:
         conn.close()
 
 
-@app.route("/api/barfoods/delete", methods=["DELETE"])
-def barfoods_delete():
-    # 確認有沒有登入(token is ok?)
+# delete
+@app.route("/api/barfoods/<int:id>", methods=["DELETE"])
+def barfoods_delete(id):
+    # 1. 驗證登入
     current_user = get_current_user_from_request()
-
     if not current_user:
-        return jsonify({"error": "未登入或token not ok"}), 401
+        return jsonify({"error": "未登入或 token 無效"}), 401
 
-    data = request.get_json(silent=True) or {}
-
-    id = (data.get("id") or "").strip()
+    # 2. （可選）額外驗證 id > 0
+    if id <= 0:
+        return jsonify({"error": "無效的 ID"}), 400
 
     conn = get_connection()
     try:
         with conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                # 新增上架物品
+            with conn.cursor() as cursor:  # 不需要 RealDictCursor（無回傳資料）
                 cursor.execute(
-                    "DELETE FROM barfoods WHERE id = %s;",
-                    (id),
+                    "DELETE FROM barfoods WHERE id = %s;", (id,)  # ← 關鍵：單元素 tuple
                 )
-        return jsonify({"message": "delete ok!"})
+                if cursor.rowcount == 0:
+                    return jsonify({"error": "找不到指定的食品 ID"}), 404
+
+        return jsonify({"message": "刪除成功！", "id": id}), 200
+
+    except Exception as e:
+        print(f"刪除失敗: {e}")
+        return jsonify({"error": "伺服器內部錯誤"}), 500
+
     finally:
         conn.close()
 
