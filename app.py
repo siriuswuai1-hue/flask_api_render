@@ -310,6 +310,30 @@ def admin_city():
         conn.close()
 
 
+# for songs
+# list
+@app.route("/api/songs/list", methods=["GET"])
+def songs_list():
+    current_user = get_current_user_from_request()
+    if not current_user:
+        return jsonify({"error": "未登入或 token 無效"}), 401
+
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, no, singed_times, backing_vocals, name, singer_name, sex, language, location 
+                    FROM songs ORDER BY singed_times DESC
+                """
+                )
+                rows = cursor.fetchall()
+                return jsonify({"message": "接收資料成功!", "data": rows}), 200
+    finally:
+        conn.close()
+
+
 # for barfoods
 # list
 @app.route("/api/barfoods/list", methods=["GET"])
